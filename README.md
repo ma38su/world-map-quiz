@@ -1,5 +1,9 @@
 # 世界地図クイズ
 
+[![Deploy to GitHub Pages](https://github.com/ma38su/world-map-quiz/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ma38su/world-map-quiz/actions/workflows/deploy-pages.yml)
+
+**公開サイト:** [https://ma38su.github.io/world-map-quiz/](https://ma38su.github.io/world-map-quiz/)
+
 地図・国旗・国の特徴を組み合わせて、世界の国々を学べるブラウザ向けクイズアプリです。メルカトル図法の世界地図と3D地球儀を切り替えながら、学習レベルに合わせて問題に挑戦できます。
 
 ## 主な機能
@@ -56,11 +60,7 @@ npm run dev
 2. **Build and deployment** の **Source** を **GitHub Actions** に設定する
 3. `main` ブランチへpushする
 
-公開先は通常、次のURLです。
-
-```text
-https://<GitHubユーザー名>.github.io/world-map-quiz/
-```
+公開先: [https://ma38su.github.io/world-map-quiz/](https://ma38su.github.io/world-map-quiz/)
 
 リポジトリ名を変更する場合は、[`vite.config.ts`](vite.config.ts) の `base` も新しいリポジトリ名に合わせて変更してください。
 

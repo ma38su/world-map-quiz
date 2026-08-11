@@ -3,6 +3,8 @@ import world from 'world-atlas/countries-50m.json'
 
 type ElevationHeatmaps = { equirectangular: HTMLCanvasElement; mercator: HTMLCanvasElement }
 
+export const ELEVATION_TEXTURE_URL = `${import.meta.env.BASE_URL}textures/earth-elevation.png`
+
 let cachedHeatmaps: Promise<ElevationHeatmaps> | null = null
 
 function terrainColor(value: number, isLand: boolean) {
@@ -93,7 +95,7 @@ export function loadElevationHeatmaps(): Promise<ElevationHeatmaps> {
       resolve({ equirectangular, mercator })
     }
     image.onerror = () => reject(new Error('Elevation texture could not be loaded'))
-    image.src = '/textures/earth-elevation.png'
+    image.src = ELEVATION_TEXTURE_URL
   })
   return cachedHeatmaps
 }

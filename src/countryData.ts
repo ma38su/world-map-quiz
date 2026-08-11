@@ -31,11 +31,22 @@ export function buildCountries(): Country[] {
   const collection = feature(world as never, (world as unknown as { objects: { countries: never } }).objects.countries) as unknown as {
     features: Array<{ id: string; properties: { name: string }; geometry: { type: string; coordinates: Polygon | Polygon[] } }>
   }
-  countryCache = collection.features.flatMap((item) => {
+  const countriesById = new Map<string, Country>()
+  for (const item of collection.features) {
     const code = isoCountries.numericToAlpha2(String(item.id).padStart(3, '0'))
-    if (!code || code === 'AQ') return []
+    if (!code || code === 'AQ') continue
     const polygons = item.geometry.type === 'Polygon' ? [item.geometry.coordinates as Polygon] : item.geometry.coordinates as Polygon[]
-    return [{ id: String(item.id), code, name: isoCountries.getName(code, 'ja') || item.properties.name, polygons, center: centerOf(polygons) }]
-  })
+    const id = String(item.id)
+    const existing = countriesById.get(id)
+    const combinedPolygons = existing ? [...existing.polygons, ...polygons] : polygons
+    countriesById.set(id, {
+      id,
+      code,
+      name: isoCountries.getName(code, 'ja') || item.properties.name,
+      polygons: combinedPolygons,
+      center: centerOf(combinedPolygons),
+    })
+  }
+  countryCache = [...countriesById.values()]
   return countryCache
 }

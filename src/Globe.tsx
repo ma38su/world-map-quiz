@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { loadElevationHeatmaps } from './elevationHeatmap'
+import { ELEVATION_TEXTURE_URL, loadElevationHeatmaps } from './elevationHeatmap'
 import { buildCountries, type Country } from './countryData'
 import { MAP_COLORS } from './mapConstants'
 export type { Country } from './countryData'
@@ -77,6 +77,7 @@ function composeMap(canvas: HTMLCanvasElement, baseCanvas: HTMLCanvasElement, co
 
 export default function Globe({ target, onReady, showElevation = false, resetNorthSignal = 0, autoRotate = false }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
+  const [webglUnavailable, setWebglUnavailable] = useState(false)
   const textureRef = useRef<THREE.CanvasTexture | null>(null)
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -94,6 +95,7 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
   const showElevationRef = useRef(showElevation)
   const autoRotateRef = useRef(autoRotate)
   const aliveRef = useRef(true)
+  const requestRenderRef = useRef<() => void>(() => {})
   showElevationRef.current = showElevation
   autoRotateRef.current = autoRotate
 
@@ -108,10 +110,21 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
     camera.position.z = 6.9
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    } catch {
+      setWebglUnavailable(true)
+      return
+    }
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     host.appendChild(renderer.domElement)
+    const handleContextLost = (event: Event) => {
+      event.preventDefault()
+      setWebglUnavailable(true)
+    }
+    renderer.domElement.addEventListener('webglcontextlost', handleContextLost)
 
     const globe = new THREE.Group()
     globeRef.current = globe
@@ -173,16 +186,43 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
     const rim = new THREE.DirectionalLight(0x2aa7ff, 1.8); rim.position.set(5, -1, -3); scene.add(rim)
 
     let dragging = false, px = 0, py = 0
-    const down = (event: PointerEvent) => { focusLockedRef.current = false; dragging = true; px = event.clientX; py = event.clientY; renderer.domElement.setPointerCapture(event.pointerId) }
+    let frame = 0
+    let previousTime = performance.now()
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const animate = (time = performance.now()) => {
+      frame = 0
+      const elapsedSeconds = Math.min(.05, (time - previousTime) / 1000)
+      previousTime = time
+      const autoRotating = autoRotateRef.current && !reduceMotion && !dragging
+      if (!focusLockedRef.current) {
+        if (autoRotating) targetRotation.current.y += elapsedSeconds * .05
+        globe.rotation.x += (targetRotation.current.x - globe.rotation.x) * .055
+        globe.rotation.y += (targetRotation.current.y - globe.rotation.y) * .055
+      }
+      camera.position.z += (zoomRef.current - camera.position.z) * .08
+      if (!document.hidden) renderer.render(scene, camera)
+      const rotationMoving = !focusLockedRef.current && (
+        Math.abs(targetRotation.current.x - globe.rotation.x) > .0001 ||
+        Math.abs(targetRotation.current.y - globe.rotation.y) > .0001
+      )
+      const zoomMoving = Math.abs(zoomRef.current - camera.position.z) > .001
+      if (autoRotating || dragging || rotationMoving || zoomMoving) requestRender()
+    }
+    const requestRender = () => {
+      if (!frame && !document.hidden) frame = requestAnimationFrame(animate)
+    }
+    requestRenderRef.current = requestRender
+    const down = (event: PointerEvent) => { focusLockedRef.current = false; dragging = true; px = event.clientX; py = event.clientY; renderer.domElement.setPointerCapture(event.pointerId); requestRender() }
     const move = (event: PointerEvent) => {
       if (!dragging) return
       targetRotation.current.y += (event.clientX - px) * .006
       targetRotation.current.x += (event.clientY - py) * .006
       targetRotation.current.x = THREE.MathUtils.clamp(targetRotation.current.x, -1.35, 1.35)
       px = event.clientX; py = event.clientY
+      requestRender()
     }
-    const up = () => { dragging = false }
-    const wheel = (event: WheelEvent) => { event.preventDefault(); zoomRef.current = THREE.MathUtils.clamp(zoomRef.current + event.deltaY * .004, 5.3, 9) }
+    const up = () => { dragging = false; requestRender() }
+    const wheel = (event: WheelEvent) => { event.preventDefault(); zoomRef.current = THREE.MathUtils.clamp(zoomRef.current + event.deltaY * .004, 5.3, 9); requestRender() }
     renderer.domElement.addEventListener('pointerdown', down)
     renderer.domElement.addEventListener('pointermove', move)
     renderer.domElement.addEventListener('pointerup', up)
@@ -192,28 +232,18 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
     const resize = () => {
       const width = host.clientWidth, height = host.clientHeight
       renderer.setSize(width, height, false); camera.aspect = width / height; camera.updateProjectionMatrix()
+      requestRender()
     }
     const observer = new ResizeObserver(resize); observer.observe(host); resize()
-    let frame = 0
-    let previousTime = performance.now()
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const animate = (time = performance.now()) => {
-      frame = requestAnimationFrame(animate)
-      const elapsedSeconds = Math.min(.05, (time - previousTime) / 1000)
-      previousTime = time
-      if (!focusLockedRef.current) {
-        if (autoRotateRef.current && !reduceMotion && !dragging) targetRotation.current.y += elapsedSeconds * .05
-        globe.rotation.x += (targetRotation.current.x - globe.rotation.x) * .055
-        globe.rotation.y += (targetRotation.current.y - globe.rotation.y) * .055
-      }
-      camera.position.z += (zoomRef.current - camera.position.z) * .08
-      if (!document.hidden) renderer.render(scene, camera)
-    }
-    animate()
+    const handleVisibilityChange = () => { previousTime = performance.now(); requestRender() }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    requestRender()
 
     return () => {
       aliveRef.current = false
-      cancelAnimationFrame(frame); observer.disconnect(); renderer.dispose(); mapTexture.dispose(); elevationRef.current?.dispose()
+      cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener('visibilitychange', handleVisibilityChange)
+      requestRenderRef.current = () => {}
+      renderer.dispose(); mapTexture.dispose(); elevationRef.current?.dispose()
       sphere.geometry.dispose(); sphereMaterial.dispose(); atmosphere.geometry.dispose(); atmosphere.material.dispose()
       markerTexture.dispose(); marker.material.dispose()
       globeRef.current = null
@@ -223,6 +253,7 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
       renderer.domElement.removeEventListener('pointerdown', down); renderer.domElement.removeEventListener('pointermove', move)
       renderer.domElement.removeEventListener('pointerup', up); renderer.domElement.removeEventListener('wheel', wheel)
       renderer.domElement.removeEventListener('pointercancel', up)
+      renderer.domElement.removeEventListener('webglcontextlost', handleContextLost)
       host.removeChild(renderer.domElement)
     }
   }, [onReady])
@@ -249,10 +280,12 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
       baseElevationRef.current = true
       composeMap(mapCanvasRef.current, baseCanvasRef.current, countriesRef.current, currentTargetRef.current)
       textureRef.current.needsUpdate = true
+    }).catch(() => {
+      // The globe remains usable when the optional elevation texture fails.
     })
     if (showElevation && !elevationRef.current && materialRef.current) {
       const material = materialRef.current
-      new THREE.TextureLoader().load('/textures/earth-elevation.png', (elevation) => {
+      new THREE.TextureLoader().load(ELEVATION_TEXTURE_URL, (elevation) => {
         if (!aliveRef.current) { elevation.dispose(); return }
         elevation.colorSpace = THREE.NoColorSpace
         elevationRef.current = elevation
@@ -261,6 +294,8 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
         material.displacementScale = showElevationRef.current ? .052 : 0
         material.bumpScale = showElevationRef.current ? .055 : 0
         material.needsUpdate = true
+      }, undefined, () => {
+        // The country map remains usable when the optional elevation texture fails.
       })
     }
     if (target) {
@@ -283,6 +318,7 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
       markerRef.current.visible = false
       focusLockedRef.current = false
     }
+    requestRenderRef.current()
   }, [showElevation, target])
 
   useEffect(() => {
@@ -295,7 +331,10 @@ export default function Globe({ target, onReady, showElevation = false, resetNor
     globe.rotation.set(northUpRotation.x, northUpRotation.y, 0)
     targetRotation.current = northUpRotation
     focusLockedRef.current = false
+    requestRenderRef.current()
   }, [resetNorthSignal])
 
-  return <div className="globe-host" ref={hostRef} aria-label="国境と標高を表示した操作可能な3D地球儀" />
+  return <div className="globe-host" ref={hostRef} role="img" aria-label={webglUnavailable ? '3D地球儀を表示できません。世界地図表示を利用してください。' : '国境と標高を表示した操作可能な3D地球儀'}>
+    {webglUnavailable && <div className="map-unavailable">3D地球儀を表示できません。世界地図表示を利用してください。</div>}
+  </div>
 }

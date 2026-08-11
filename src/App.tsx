@@ -99,6 +99,7 @@ function App() {
   const [round, setRound] = useState({ answered: 0, correct: 0, usedIds: [] as string[], limit: 10 })
   const [roundComplete, setRoundComplete] = useState(false)
   const answerLockedRef = useRef(false)
+  const resultMessageRef = useRef<HTMLDivElement>(null)
   const currentKind: QuestionKind = target ? activeQuestionKind : questionKind
   const totalScore = useMemo(() => Object.values(scores).reduce(
     (sum, item) => ({ correct: sum.correct + item.correct, total: sum.total + item.total }),
@@ -112,6 +113,11 @@ function App() {
       // Storage can be unavailable in strict privacy modes; the quiz still works in memory.
     }
   }, [level, mode, questionKind, mapProjection, scores, mistakes])
+
+  useEffect(() => {
+    if (result === 'idle') return
+    resultMessageRef.current?.focus()
+  }, [result])
 
   const pool = useMemo(
     () => (reviewMode
@@ -419,7 +425,7 @@ function App() {
             ) : (
               <form onSubmit={(event) => { event.preventDefault(); if (result === 'idle') checkAnswer(); else nextQuestion() }}>
                 {QUESTION_META[activeQuestionKind].usesFeature && <div className="feature-question"><RubyText text={featureText || COUNTRY_FEATURES[target.code]?.[0] || ''} /></div>}
-                {activeQuestionKind === 'flag-to-map' && <div className="flag-question"><Suspense fallback={<span className="flag-placeholder" />}><CountryFlag code={target.code} /></Suspense><b><RubyText text="この｜国旗《こっき》の｜国《くに》はどこ？" /></b></div>}
+                {activeQuestionKind === 'flag-to-map' && <div className="flag-question"><Suspense fallback={<span className="flag-placeholder" />}><CountryFlag code={target.code} /></Suspense><b><RubyText text="この｜国旗《こっき》の｜国《くに》はどこ？" /></b><span className="visually-hidden">スクリーンリーダー向け問題: <CountryName country={target} /></span></div>}
                 <label><RubyText text={QUESTION_META[activeQuestionKind].answerType === 'location' ? '｜地図《ちず》の｜色《いろ》を｜選択《せんたく》' : QUESTION_META[activeQuestionKind].answerType === 'flag' ? '｜国旗《こっき》を｜選択《せんたく》' : '｜国名《こくめい》を｜選択《せんたく》'} /></label>
                 <div className="choice-grid">
                   {choices.map((country, index) => {
@@ -430,6 +436,9 @@ function App() {
                       type="button"
                       key={country.id}
                       className={state}
+                      aria-label={QUESTION_META[activeQuestionKind].locationQuestion || QUESTION_META[activeQuestionKind].answerType === 'flag'
+                        ? `選択肢 ${String.fromCharCode(65 + index)}: ${country.name}`
+                        : undefined}
                       onClick={() => checkAnswer(country)}
                       disabled={result !== 'idle'}
                     ><span className="choice-letter" style={QUESTION_META[activeQuestionKind].locationQuestion ? { background: CHOICE_COLORS[index].color, color: CHOICE_COLORS[index].textColor } : undefined}>{String.fromCharCode(65 + index)}</span>
@@ -448,7 +457,7 @@ function App() {
                   })}
                 </div>
                 {result !== 'idle' && (
-                  <div className={`result-message ${result}`}>
+                  <div ref={resultMessageRef} className={`result-message ${result}`} role="status" aria-live="assertive" tabIndex={-1}>
                     <b>{result === 'correct' ? <CheckCircle2 size={20} /> : <XCircle size={20} />}{result === 'correct' ? <RubyText text="｜正解《せいかい》！" /> : <RubyText text="｜不正解《ふせいかい》" />}</b>
                     <span className="result-details">
                       {result === 'wrong' && QUESTION_META[activeQuestionKind].answerType === 'flag' && selectedCode && (

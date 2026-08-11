@@ -1,4 +1,4 @@
-import type { Country } from './Globe'
+import type { Country } from './countryData'
 import { getCountryLevel, type QuizLevel } from './quizLevels'
 import { QUESTION_META, type ConcreteQuestionKind } from './quizTypes'
 

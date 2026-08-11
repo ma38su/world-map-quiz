@@ -485,6 +485,8 @@ export default function MercatorMap({ target, choiceCountries = [], onReady, sho
         if (cancelled) return
         heatmapRef.current = mercator
         draw()
+      }).catch(() => {
+        // The map remains usable when the optional elevation texture fails.
       })
     const pointers = new Map<number, { x: number; y: number }>()
     let pinchDistance = 0
@@ -562,5 +564,5 @@ export default function MercatorMap({ target, choiceCountries = [], onReady, sho
     }
   }, [choiceCountries, showElevation, target])
 
-  return <canvas ref={canvasRef} className="mercator-map" aria-label="国境を表示したメルカトル図法の世界地図" />
+  return <canvas ref={canvasRef} className="mercator-map" role="img" aria-label="国境を表示したメルカトル図法の世界地図" />
 }

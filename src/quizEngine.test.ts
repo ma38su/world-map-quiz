@@ -17,6 +17,16 @@ describe('shuffle', () => {
 })
 
 describe('createChoices', () => {
+  it('国名から場所を選ぶ形式を出題形式として提供する', () => {
+    expect(CONCRETE_QUESTION_KINDS).toContain('name-to-map')
+    expect(QUESTION_META['name-to-map']).toMatchObject({
+      locationQuestion: true,
+      highlightedCountry: false,
+      usesFeature: false,
+      answerType: 'location',
+    })
+  })
+
   it.each(CONCRETE_QUESTION_KINDS)('%sでは全収録国に重複のない4択を生成する', (kind) => {
     for (const target of countries) {
       const choices = createChoices(target, countries, kind)

@@ -190,6 +190,9 @@ h1 em { color: transparent; font-style: normal; -webkit-text-stroke: 2px #0b2132
 
 form label { display: block; margin-bottom: 8px; color: #68747a; font-size: 11px; font-weight: 700; }
 .feature-question { margin: 0 0 12px; padding: 12px 14px; border-left: 3px solid #168b75; color: #19333f; background: #edf3ed; font-size: 13px; font-weight: 500; line-height: 2; }
+.name-question { display: flex; align-items: baseline; gap: 5px; margin: 0 0 12px; padding: 12px 14px; border-left: 3px solid #168b75; color: #19333f; background: #edf3ed; }
+.name-question b { color: #0c6f61; font-size: 18px; }
+.name-question span { font-size: 12px; font-weight: 700; }
 .ruby-text { vertical-align: baseline; }
 ruby { ruby-align: center; ruby-position: over; vertical-align: baseline; line-height: 1; }
 rt { color: #526d70; font-size: .56em; font-weight: 500; line-height: 1; }

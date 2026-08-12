@@ -425,6 +425,7 @@ function App() {
             ) : (
               <form onSubmit={(event) => { event.preventDefault(); if (result === 'idle') checkAnswer(); else nextQuestion() }}>
                 {QUESTION_META[activeQuestionKind].usesFeature && <div className="feature-question"><RubyText text={featureText || COUNTRY_FEATURES[target.code]?.[0] || ''} /></div>}
+                {activeQuestionKind === 'name-to-map' && <div className="name-question"><b><CountryName country={target} /></b><span><RubyText text="の｜場所《ばしょ》はどこ？" /></span></div>}
                 {activeQuestionKind === 'flag-to-map' && <div className="flag-question"><Suspense fallback={<span className="flag-placeholder" />}><CountryFlag code={target.code} /></Suspense><b><RubyText text="この｜国旗《こっき》の｜国《くに》はどこ？" /></b><span className="visually-hidden">スクリーンリーダー向け問題: <CountryName country={target} /></span></div>}
                 <label><RubyText text={QUESTION_META[activeQuestionKind].answerType === 'location' ? '｜地図《ちず》の｜色《いろ》を｜選択《せんたく》' : QUESTION_META[activeQuestionKind].answerType === 'flag' ? '｜国旗《こっき》を｜選択《せんたく》' : '｜国名《こくめい》を｜選択《せんたく》'} /></label>
                 <div className="choice-grid">

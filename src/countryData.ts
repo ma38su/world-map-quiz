@@ -12,6 +12,10 @@ type Polygon = Ring[]
 
 export type Country = { id: string; code: string; name: string; polygons: Polygon[]; center: Position }
 
+const COUNTRY_NAME_OVERRIDES: Partial<Record<string, string>> = {
+  SZ: 'エスワティニ',
+}
+
 let countryCache: Country[] | null = null
 
 function centerOf(polygons: Polygon[]): Position {
@@ -42,7 +46,7 @@ export function buildCountries(): Country[] {
     countriesById.set(id, {
       id,
       code,
-      name: isoCountries.getName(code, 'ja') || item.properties.name,
+      name: COUNTRY_NAME_OVERRIDES[code] ?? (isoCountries.getName(code, 'ja') || item.properties.name),
       polygons: combinedPolygons,
       center: centerOf(combinedPolygons),
     })

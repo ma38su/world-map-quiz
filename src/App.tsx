@@ -362,7 +362,12 @@ function App() {
           </div>
           <Suspense fallback={<div className="map-loading"><RubyText text="｜地図《ちず》を｜読《よ》み｜込《こ》んでいます…" /></div>}>
             {mapProjection === 'mercator'
-              ? <MercatorMap target={QUESTION_META[currentKind].highlightedCountry ? target : null} choiceCountries={QUESTION_META[currentKind].locationQuestion ? choices : []} onReady={setCountries} showElevation={showElevation} />
+              ? <MercatorMap
+                  target={QUESTION_META[currentKind].highlightedCountry || (result !== 'idle' && QUESTION_META[currentKind].answerType === 'name') ? target : null}
+                  choiceCountries={QUESTION_META[currentKind].locationQuestion ? choices : []}
+                  onReady={setCountries}
+                  showElevation={showElevation}
+                />
               : <Globe target={QUESTION_META[currentKind].highlightedCountry ? target : null} onReady={setCountries} showElevation={showElevation} resetNorthSignal={resetNorthSignal} />}
           </Suspense>
         </div>
